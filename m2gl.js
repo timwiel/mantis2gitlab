@@ -26,10 +26,10 @@ var argv = require('optimist')
     .describe('f', 'The first issue # to import (Example: 123)')
     .argv;
 
-var inputFile = __dirname + '/' + argv.input;
-var configFile = __dirname + '/' + argv.config;
+var configFile =  argv.config;
+var inputFile = argv.input;
 var fromIssueId = Number(argv.from||0);
-var gitlabAPIURLBase = argv.gitlaburl + '/api/v3';
+var gitlabAPIURLBase = argv.gitlaburl + '/api/v4';
 var gitlabProjectName = argv.project;
 var gitlabAdminPrivateToken = argv.token;
 var gitlabSudo = argv.sudo;
@@ -57,10 +57,11 @@ promise.then(function() {
  */
 function getConfig() {
   log_progress("Reading configuration...");
-  return FS.read(configFile, {encoding: 'utf8'})
+  return FS.read(configFile)
       .then(function(data) {
         var config = JSON.parse(data);
-        config.users = _.extend({
+  
+      config.users = _.extend({
           "": {
             name: "Unknown",
             gl_username: gitlabSudo
@@ -116,7 +117,11 @@ function getGitLabProject() {
   var url = gitlabAPIURLBase + '/projects';
   var data = { per_page: 100, private_token: gitlabAdminPrivateToken, sudo: gitlabSudo };
 
-  return rest.get(url, {data: data}).then(function(result) {
+  return rest.get(url, {data: data})
+  .fail(function(err) {
+    console.log(err);
+  })
+  .then(function(result) {
 
     gitLab.project = _.find(result, { path_with_namespace : gitlabProjectName }) || null;
 
@@ -152,7 +157,7 @@ function mapGitLabUserIds() {
   var users = config.users,
       gitlabUsers = gitLab.gitlabUsers;
   _.forEach(users, function(user) {
-    user.gl_id = (_.find(gitlabUsers, { id: user.gl_username }) || {}).id;
+    user.gl_id = (_.find(gitlabUsers, { username: user.gl_username }) || {}).id;
   });
 }
 
@@ -234,6 +239,8 @@ function importIssue(mantisIssue) {
                 console.log(("#" + issueId + ": Updated successfully.").green);
               });
         } else {
+          console.log(data.title);
+          return true;
           return insertSkippedIssues(issueId-1)
               .then(function() {
                 return insertAndCloseIssue(issueId, data, isClosed(mantisIssue));
@@ -247,7 +254,7 @@ function insertSkippedIssues(issueId) {
     return Q();
   }
 
-  console.warn(("Skipping Missing Mantis Issue (<= #" + issueId + ") ...").yellow);
+  console.log(("Adding" + issueId + ") ...").blue);
 
   var data = {
     title: "Skipped Mantis Issue",
@@ -318,10 +325,14 @@ function getRemainingGitLabProjectIssues(page, per_page) {
   var data = {
     page: page,
     per_page: per_page,
-    order_by: 'id',
+    //order_by: 'id',
     private_token: gitlabAdminPrivateToken, sudo: gitlabSudo };
 
-  return rest.get(url, {data: data}).then(function(issues) {
+  return rest.get(url, {data: data})
+  .fail(function(err) {
+    console.log(err);
+  })
+  .then(function(issues) {
     if(issues.length < per_page) {
       return issues;
     }
@@ -383,12 +394,16 @@ function getLabels(row) {
   var label;
   var labels = (row.tags || []).slice(0);
 
-  if(label = config.category_labels[row.Category]) {
-    labels.push(label);
+  if (!isNaN(row.Category)) {
+    if(label = config.category_labels[row.Category]) {
+      labels.push(label);
+    }
   }
 
-  if(label = config.priority_labels[row.Priority]) {
-    labels.push(label);
+  if (!isNaN(row.Priority)) {
+    if(label = config.priority_labels[row.Priority]) {
+      labels.push(label);
+    }
   }
 
   if(label = config.severity_labels[row.Severity]) {
