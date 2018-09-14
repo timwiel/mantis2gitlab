@@ -27,6 +27,12 @@ npm install -g nonplus/mantis2gitlab
 m2gl -i options
 ```
 
+## Example Usage
+
+```
+m2gl -i /absolute/path/to/file/mantis_bug_table.csv -c /absolute/path/to/file/export.json -g http://gitlaburl.goes.here:gitlab_port_goes_here -p gitlabnamespace/gitlabproject -t tPhrvBzP_kpqVvq_G5jZ -s gitlab_user1
+```
+
 ## Options
 
 ```
@@ -42,6 +48,31 @@ m2gl -i options
 ## Config File
 
 In order to correctly map Mantis attributes you should create a JSON file and specify it with the **-c** switch.
+
+### Example Config used on Gitlab CE 11
+Called export.json in above commandline call
+```
+{
+  "users": {
+    "mantisuser1": {
+      "gl_username": "gitlab_user1"
+    },
+    "mantisuser2": {
+      "gl_username": "gitlab_user2"
+    }
+  },
+  "mantisUrl": "https://url.goes.here.with.no.trailing.slash",
+  "closed_statuses": {
+        "80": true,
+        "resolved": true,
+        "90": true,
+        "closed": true
+  },
+  "priority_labels": {},
+  "severity_labels": {},
+  "category_labels": {}
+}
+```
 
 ### Users
 
@@ -82,54 +113,6 @@ This section maps Mantis Categories to corresponding GitLab labels.
     "Voter UI": "area:Voter",
     "Server": "area:Service"
     }
-}
-```
-
-### Priority Labels (optional)
-
-This section maps Mantis Priorities to corresponding GitLab labels.
-Note that the numeric priorities are used when exporting from SQL.
-
-```
-{
-  "priority_labels": {
-    "20": "priority:low",
-    "low": "priority:low",
-    "40": "priority:high",
-    "high": "priority:high",
-    "50": "priority:urgent",
-    "urgent": "priority:urgent",
-    "60": "priority:immediate",
-    "immediate": "priority:immediate"
-  }
-}
-```
-
-### Severity Labels (optional)
-
-This section maps Mantis Severities to corresponding GitLab labels.
-Note that the numeric severities are used when exporting from SQL.
-
-```
-{
-  "severity_labels": {
-  	"10": "severity:feature",
-  	"feature": "severity:feature",
-  	"20": "severity:trivial",
-  	"trivial": "severity:trivial",
-  	"30": "severity:text",
-  	"text": "severity:text",
-  	"40": "severity:tweak",
-  	"tweak": "severity:tweak",
-  	"50": "severity:minor",
-  	"minor": "severity:minor",
-  	"60": "severity:major",
-  	"major": "severity:major",
-  	"70": "severity:crash",
-  	"crash": "severity:crash",
-  	"80": "severity:block",
-  	"block": "severity:block"
-  }
 }
 ```
 
@@ -221,10 +204,16 @@ ORDER BY bug.id
 - Milestones are not currently supported.
 
 ## Version History
++ **2.0**
+	+ Updated to make it work (roughly) with Gitlab CE 11
 + **1.0**
 	+ Initial release
 
 ## Author
+**Tim Wiel**
+
++ http://github.com/timwiel
+
 **Stepan Riha**
 
 + http://github.com/nonplus
