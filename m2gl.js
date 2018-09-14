@@ -214,8 +214,6 @@ function importIssue(mantisIssue) {
   var description = getDescription(mantisIssue);
   var assignee = getUserByMantisUsername(mantisIssue["Assigned To"]);
   var milestoneId = '';
-  var labels = getLabels(mantisIssue);
-  var author = getUserByMantisUsername(mantisIssue.Reporter);
 
   log_progress("Importing: #" + issueId + " - " + title + " ...");
 
@@ -224,7 +222,6 @@ function importIssue(mantisIssue) {
     description: description,
     assignee_id: assignee && assignee.gl_id,
     milestone_id: milestoneId,
-    labels: labels,
     sudo: gitlabSudo,
     private_token: gitlabAdminPrivateToken
   };
@@ -232,11 +229,12 @@ function importIssue(mantisIssue) {
   return getIssue(gitLab.project.id, issueId)
       .then(function(gitLabIssue) {
         if (gitLabIssue) {
+          //console.log('Issue #' + issueId + ' (Status: ' + mantisIssue.Status + ' | IsClosed: ' + isClosed(mantisIssue));
           return updateIssue(gitLab.project.id, gitLabIssue.iid, _.extend({
             state_event: isClosed(mantisIssue) ? 'close' : 'reopen'
           }, data))
               .then(function() {
-                console.log(("#" + issueId + ": Updated successfully.").green);
+                console.log(("#" + gitLabIssue.iid + ": Updated successfully.").green);
               });
         } else {
           return insertAndCloseIssue(issueId, data, isClosed(mantisIssue));
@@ -352,29 +350,6 @@ function getDescription(row) {
   return description;
 }
 
-function getLabels(row) {
-  var label;
-  var labels = (row.tags || []).slice(0);
-
-  if (!isNaN(row.Category)) {
-    if(label = config.category_labels[row.Category]) {
-      labels.push(label);
-    }
-  }
-
-  if (!isNaN(row.Priority)) {
-    if(label = config.priority_labels[row.Priority]) {
-      labels.push(label);
-    }
-  }
-
-  if(label = config.severity_labels[row.Severity]) {
-    labels.push(label);
-  }
-
-  return labels.join(",");
-}
-
 function isClosed(row) {
   return config.closed_statuses[row.Status];
 }
@@ -404,8 +379,8 @@ function insertIssue(projectId, data) {
       });
 }
 
-function updateIssue(projectId, issueId, data) {
-  var url = gitlabAPIURLBase + '/projects/' + projectId + '/issues/' + issueId;
+function updateIssue(projectId, issueIId, data) {
+  var url = gitlabAPIURLBase + '/projects/' + projectId + '/issues/' + issueIId;
 
   return rest.put(url, {data: data})
       .then(null, function(error) {
@@ -414,7 +389,7 @@ function updateIssue(projectId, issueId, data) {
 }
 
 function closeIssue(issue, custom) {
-  var url = gitlabAPIURLBase + '/projects/' + issue.project_id + '/issues/' + issue.id;
+  var url = gitlabAPIURLBase + '/projects/' + issue.project_id + '/issues/' + issue.iid;
   var data = _.extend({
     state_event: 'close',
     private_token: gitlabAdminPrivateToken,
