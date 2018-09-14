@@ -232,54 +232,16 @@ function importIssue(mantisIssue) {
   return getIssue(gitLab.project.id, issueId)
       .then(function(gitLabIssue) {
         if (gitLabIssue) {
-          return updateIssue(gitLab.project.id, gitLabIssue.id, _.extend({
+          return updateIssue(gitLab.project.id, gitLabIssue.iid, _.extend({
             state_event: isClosed(mantisIssue) ? 'close' : 'reopen'
           }, data))
               .then(function() {
                 console.log(("#" + issueId + ": Updated successfully.").green);
               });
         } else {
-          console.log(data.title);
-          return true;
-          return insertSkippedIssues(issueId-1)
-              .then(function() {
-                return insertAndCloseIssue(issueId, data, isClosed(mantisIssue));
-              });
+          return insertAndCloseIssue(issueId, data, isClosed(mantisIssue));
         }
       });
-}
-
-function insertSkippedIssues(issueId) {
-  if (gitLab.gitlabIssues[issueId]) {
-    return Q();
-  }
-
-  console.log(("Adding" + issueId + ") ...").blue);
-
-  var data = {
-    title: "Skipped Mantis Issue",
-    sudo: gitlabSudo,
-    private_token: gitlabAdminPrivateToken
-  };
-
-  return insertAndCloseIssue(issueId, data, true, getSkippedIssueData)
-      .then(function() {
-        return insertSkippedIssues(issueId);
-      });
-
-  function getSkippedIssueData(gitLabIssue) {
-    var issueId = gitLabIssue.iid;
-    var description;
-    if (config.mantisUrl) {
-      description = "[Mantis Issue " + issueId + "](" + config.mantisUrl + "/view.php?id=" + issueId + ")";
-    } else {
-      description = "Mantis Issue " + issueId;
-    }
-    return {
-      title: "Skipped Mantis Issue " + issueId,
-      description: "_Skipped " + description + "_"
-    };
-  }
 }
 
 function insertAndCloseIssue(issueId, data, close, custom) {
